@@ -14,10 +14,14 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	.traverseParentHierarchy = @"KNSemiModalOptionTraverseParentHierarchy",
 	.pushParentBack          = @"KNSemiModalOptionPushParentBack",
 	.animationDuration       = @"KNSemiModalOptionAnimationDuration",
+	.animationAngle          = @"KNSemiModalOptionAnimationAngle",
 	.parentAlpha             = @"KNSemiModalOptionParentAlpha",
-    .parentScale              = @"KNSemiModalOptionParentScale",
+    .parentScaleInitial      = @"KNSemiModalOptionParentScaleInitial",
+    .parentScaleFinal        = @"KNSemiModalOptionParentScaleFinal",
+    .parentDisplacement      = @"KNSemiModalOptionParentDisplacement",
 	.shadowOpacity           = @"KNSemiModalOptionShadowOpacity",
 	.transitionStyle         = @"KNSemiModalTransitionStyle",
+	.modalPosition           = @"KNSemiModalModalPosition",
     .disableCancel           = @"KNSemiModalOptionDisableCancel",
 };
 
@@ -28,6 +32,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 #define kSemiModalScreenshotTag            10002
 #define kSemiModalModalViewTag             10003
 #define kSemiModalDismissButtonTag         10004
+
+@interface NSObject (YMOptionsAndDefaults)
+
+- (void)ym_registerOptions:(NSDictionary *)options defaults:(NSDictionary *)defaults;
+- (id)ym_optionOrDefaultForKey:(NSString*)optionKey;
+
+@end
 
 @interface UIViewController (KNSemiModalInternal)
 -(UIView*)parentTarget;
@@ -53,14 +64,30 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 #pragma mark Options and defaults
 
 -(void)kn_registerDefaultsAndOptions:(NSDictionary*)options {
+    
+    double animationAngle = 15.0f;
+    double parentDisplacement = 0.08f;
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
+        // The rotation angle is minor as the view is nearer
+        animationAngle = 7.5f;
+        parentDisplacement = 0.04f;
+    }
+    //animationAngle = 0.0;
+    //parentDisplacement = 0.0;
+    
+    
 	[self ym_registerOptions:options defaults:@{
      KNSemiModalOptionKeys.traverseParentHierarchy : @(YES),
      KNSemiModalOptionKeys.pushParentBack : @(YES),
      KNSemiModalOptionKeys.animationDuration : @(0.5),
+     KNSemiModalOptionKeys.animationAngle : @(animationAngle),
      KNSemiModalOptionKeys.parentAlpha : @(0.5),
-     KNSemiModalOptionKeys.parentScale : @(0.8),     
+     KNSemiModalOptionKeys.parentScaleInitial : @(0.95),
+     KNSemiModalOptionKeys.parentScaleFinal : @(0.8),
+     KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
      KNSemiModalOptionKeys.shadowOpacity : @(0.8),
-     KNSemiModalOptionKeys.transitionStyle : @(KNSemiModalTransitionStyleSlideUp),
+     KNSemiModalOptionKeys.transitionStyle : @(KNSemiModalTransitionStyleSlide),
+     KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionTop),
      KNSemiModalOptionKeys.disableCancel : @(NO),
 	 }];
 }
@@ -68,28 +95,33 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 #pragma mark Push-back animation group
 
 -(CAAnimationGroup*)animationGroupForward:(BOOL)_forward {
+    
+    double animationAngle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationAngle] doubleValue];
+    double parentScaleInitial = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentScaleInitial] doubleValue];
+    double parentScaleFinal = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentScaleFinal] doubleValue];
+    double parentDisplacement = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentDisplacement] doubleValue];
+    
+    NSInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] integerValue];
+    
+    double parentTranslate = [self parentTarget].frame.size.height*parentDisplacement;
+    animationAngle = -animationAngle*M_PI/180.0f;
+    if (modalPosition == KNSemiModalModalPositionBottom) {
+        parentTranslate *= -1.0f;
+        animationAngle *= -1.0f;
+    }
+    
     // Create animation keys, forwards and backwards
     CATransform3D t1 = CATransform3DIdentity;
     t1.m34 = 1.0/-900;
-    t1 = CATransform3DScale(t1, 0.95, 0.95, 1);
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
-        // The rotation angle is minor as the view is nearer
-        t1 = CATransform3DRotate(t1, 7.5f*M_PI/180.0f, 1, 0, 0);
-    } else {
-        t1 = CATransform3DRotate(t1, 15.0f*M_PI/180.0f, 1, 0, 0);
-    }
+    t1 = CATransform3DScale(t1, parentScaleInitial, parentScaleInitial, 1);
+    
+    t1 = CATransform3DRotate(t1, animationAngle, 1, 0, 0);
     
     CATransform3D t2 = CATransform3DIdentity;
     t2.m34 = t1.m34;
-    double scale = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentScale] doubleValue];
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
-        // Minor shift to mantai perspective
-        t2 = CATransform3DTranslate(t2, 0, [self parentTarget].frame.size.height*-0.04, 0);
-        t2 = CATransform3DScale(t2, scale, scale, 1);
-    } else {
-        t2 = CATransform3DTranslate(t2, 0, [self parentTarget].frame.size.height*-0.08, 0);
-        t2 = CATransform3DScale(t2, scale, scale, 1);
-    }
+    
+    t2 = CATransform3DTranslate(t2, 0, parentTranslate, 0);
+    t2 = CATransform3DScale(t2, parentScaleFinal, parentScaleFinal, 1);
     
     CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
     animation.toValue = [NSValue valueWithCATransform3D:t1];
@@ -250,7 +282,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         }];
         
         // Present view animated
-        view.frame = (transitionStyle == KNSemiModalTransitionStyleSlideUp
+        view.frame = (transitionStyle == KNSemiModalTransitionStyleSlide
                       ? CGRectOffset(semiViewFrame, 0, +semiViewHeight)
                       : semiViewFrame);
         if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
@@ -274,7 +306,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         view.layer.rasterizationScale = [[UIScreen mainScreen] scale];
         
         [UIView animateWithDuration:duration animations:^{
-            if (transitionStyle == KNSemiModalTransitionStyleSlideUp) {
+            if (transitionStyle == KNSemiModalTransitionStyleSlide) {
                 view.frame = semiViewFrame;
             } else if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
                 view.alpha = 1.0;
@@ -324,7 +356,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	}
 	
     [UIView animateWithDuration:duration animations:^{
-        if (transitionStyle == KNSemiModalTransitionStyleSlideUp) {
+        if (transitionStyle == KNSemiModalTransitionStyleSlide) {
             if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
                 // As the view is centered, we perform a vertical translation
                 modal.frame = CGRectMake((target.bounds.size.width - modal.frame.size.width) / 2.0, target.bounds.size.height, modal.frame.size.width, modal.frame.size.height);
