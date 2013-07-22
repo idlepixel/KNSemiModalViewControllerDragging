@@ -25,6 +25,7 @@ extern const struct KNSemiModalOptionKeys {
 	__unsafe_unretained NSString *transitionStyle;          // boxed NSNumber - one of the KNSemiModalTransitionStyle values.
 	__unsafe_unretained NSString *modalPosition;            // boxed NSNumber - one of the KNSemiModalModalPosition values.
     __unsafe_unretained NSString *disableCancel;            // boxed BOOL. default is NO.
+	__unsafe_unretained NSString *backgroundColor;          // default is [UIColor blackColor].
 } KNSemiModalOptionKeys;
 
 NS_ENUM(NSUInteger, KNSemiModalTransitionStyle) {

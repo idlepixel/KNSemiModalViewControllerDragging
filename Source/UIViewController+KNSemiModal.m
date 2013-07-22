@@ -23,6 +23,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	.transitionStyle         = @"KNSemiModalTransitionStyle",
 	.modalPosition           = @"KNSemiModalModalPosition",
     .disableCancel           = @"KNSemiModalOptionDisableCancel",
+    .backgroundColor         = @"KNSemiModalOptionBackgroundColor",
 };
 
 #define kSemiModalViewController           @"PaPQC93kjgzUanz"
@@ -89,6 +90,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
      KNSemiModalOptionKeys.transitionStyle : @(KNSemiModalTransitionStyleSlide),
      KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionTop),
      KNSemiModalOptionKeys.disableCancel : @(NO),
+     KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
 	 }];
 }
 
@@ -101,7 +103,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     double parentScaleFinal = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentScaleFinal] doubleValue];
     double parentDisplacement = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentDisplacement] doubleValue];
     
-    NSInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] integerValue];
+    NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
     
     double parentTranslate = [self parentTarget].frame.size.height*parentDisplacement;
     animationAngle = -animationAngle*M_PI/180.0f;
@@ -237,22 +239,34 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         // Get transition style
         NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
         
+        // Get the modal position
+        NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
+        
         // Calulate all frames
         CGFloat semiViewHeight = view.frame.size.height;
         CGRect vf = target.bounds;
         CGRect semiViewFrame;
         if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
-            // We center the view and mantain aspect ration
-            semiViewFrame = CGRectMake((vf.size.width - view.frame.size.width) / 2.0, vf.size.height-semiViewHeight, view.frame.size.width, semiViewHeight);
+            // We center the view and mantain aspect ratio
+            semiViewFrame = CGRectMake((vf.size.width - view.frame.size.width) / 2.0, 0.0f, view.frame.size.width, semiViewHeight);
         } else {
-            semiViewFrame = CGRectMake(0, vf.size.height-semiViewHeight, vf.size.width, semiViewHeight);
+            semiViewFrame = CGRectMake(0.0f, 0.0f, vf.size.width, semiViewHeight);
         }
+        
+        CGFloat modalPositionModifier = -1.0f;
         
         CGRect overlayFrame = CGRectMake(0, 0, vf.size.width, vf.size.height-semiViewHeight);
         
+        if (modalPosition == KNSemiModalModalPositionBottom) {
+            semiViewFrame.origin.y = vf.size.height-semiViewHeight;
+            modalPositionModifier = 1.0f;
+        } else {
+            overlayFrame.origin.y = semiViewHeight;
+        }
+        
         // Add semi overlay
         UIView * overlay = [[UIView alloc] initWithFrame:target.bounds];
-        overlay.backgroundColor = [UIColor blackColor];
+        overlay.backgroundColor = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.backgroundColor];
         overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         overlay.tag = kSemiModalOverlayTag;
         
@@ -283,7 +297,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         
         // Present view animated
         view.frame = (transitionStyle == KNSemiModalTransitionStyleSlide
-                      ? CGRectOffset(semiViewFrame, 0, +semiViewHeight)
+                      ? CGRectOffset(semiViewFrame, 0, +modalPositionModifier*semiViewHeight)
                       : semiViewFrame);
         if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
             view.alpha = 0.0;
@@ -345,6 +359,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     UIView * modal = [target.subviews objectAtIndex:target.subviews.count-1];
     UIView * overlay = [target.subviews objectAtIndex:target.subviews.count-2];
 	NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
+    NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
 	NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
 	UIViewController *vc = objc_getAssociatedObject(self, kSemiModalViewController);
 	KNTransitionCompletionBlock dismissBlock = objc_getAssociatedObject(self, kSemiModalDismissBlock);
@@ -355,13 +370,20 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		[vc beginAppearanceTransition:NO animated:YES]; // iOS 6
 	}
 	
+    CGFloat modalFinalYPosition;
+    if (modalPosition == KNSemiModalModalPositionBottom) {
+        modalFinalYPosition = target.bounds.size.height;
+    } else {
+        modalFinalYPosition = 0.0f-CGRectGetHeight(modal.frame);
+    }
+    
     [UIView animateWithDuration:duration animations:^{
         if (transitionStyle == KNSemiModalTransitionStyleSlide) {
             if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
                 // As the view is centered, we perform a vertical translation
-                modal.frame = CGRectMake((target.bounds.size.width - modal.frame.size.width) / 2.0, target.bounds.size.height, modal.frame.size.width, modal.frame.size.height);
+                modal.frame = CGRectMake((target.bounds.size.width - modal.frame.size.width) / 2.0, modalFinalYPosition, modal.frame.size.width, modal.frame.size.height);
             } else {
-                modal.frame = CGRectMake(0, target.bounds.size.height, modal.frame.size.width, modal.frame.size.height);
+                modal.frame = CGRectMake(0, modalFinalYPosition, modal.frame.size.width, modal.frame.size.height);
             }
         } else if (transitionStyle == KNSemiModalTransitionStyleFadeOut || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
             modal.alpha = 0.0;
