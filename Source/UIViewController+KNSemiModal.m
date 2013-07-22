@@ -88,7 +88,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
      KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
      KNSemiModalOptionKeys.shadowOpacity : @(0.8),
      KNSemiModalOptionKeys.transitionStyle : @(KNSemiModalTransitionStyleSlide),
-     KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionTop),
+     KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionBottom),
      KNSemiModalOptionKeys.disableCancel : @(NO),
      KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
 	 }];
@@ -277,6 +277,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         // Dismiss button (if allow)
         if(![[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.disableCancel] boolValue]) {
             // Don't use UITapGestureRecognizer to avoid complex handling
+#warning the hit area needs to be fixed for iPad
             UIButton * dismissButton = [UIButton buttonWithType:UIButtonTypeCustom];
             [dismissButton addTarget:self action:@selector(dismissSemiModalView) forControlEvents:UIControlEventTouchUpInside];
             dismissButton.backgroundColor = [UIColor clearColor];
