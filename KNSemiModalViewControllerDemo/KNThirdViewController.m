@@ -49,7 +49,7 @@
 - (IBAction)resizeSemiModalView:(id)sender {
   UIViewController * parent = [self.view containingViewController];
   if ([parent respondsToSelector:@selector(resizeSemiView:)]) {
-    [parent resizeSemiView:CGSizeMake(320, arc4random() % 280 + 180)];
+    [parent resizeSemiView:CGSizeMake(CGRectGetWidth(self.view.frame), arc4random() % 280 + 180)];
   }
 }
 
