@@ -282,7 +282,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             [dismissButton addTarget:self action:@selector(dismissSemiModalView) forControlEvents:UIControlEventTouchUpInside];
             dismissButton.backgroundColor = [UIColor clearColor];
             dismissButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            dismissButton.frame = overlayFrame;
+            dismissButton.frame = overlay.bounds;
             dismissButton.tag = kSemiModalDismissButtonTag;
             [overlay addSubview:dismissButton];
         }
@@ -311,6 +311,11 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             view.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
         }
         
+        UIView *backingView = [[UIView alloc] initWithFrame:view.frame];
+        backingView.userInteractionEnabled = YES;
+        backingView.exclusiveTouch = YES;
+        [target addSubview:backingView];
+        
         view.tag = kSemiModalModalViewTag;
         [target addSubview:view];
         view.layer.shadowColor = [[UIColor blackColor] CGColor];
@@ -320,9 +325,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         view.layer.shouldRasterize = YES;
         view.layer.rasterizationScale = [[UIScreen mainScreen] scale];
         
+        backingView.frame = view.frame;
+        backingView.backgroundColor = [UIColor clearColor];
+        
         [UIView animateWithDuration:duration animations:^{
             if (transitionStyle == KNSemiModalTransitionStyleSlide) {
                 view.frame = semiViewFrame;
+                backingView.frame = semiViewFrame;
             } else if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
                 view.alpha = 1.0;
             }
@@ -357,8 +366,9 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 
     // Correct target for dismissal
     UIView * target = [self parentTarget];
-    UIView * modal = [target.subviews objectAtIndex:target.subviews.count-1];
-    UIView * overlay = [target.subviews objectAtIndex:target.subviews.count-2];
+    UIView * modalView = [target.subviews objectAtIndex:target.subviews.count-1];
+    UIView * backingView = [target.subviews objectAtIndex:target.subviews.count-2];
+    UIView * overlayView = [target.subviews objectAtIndex:target.subviews.count-3];
 	NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
     NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
 	NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
@@ -375,23 +385,24 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     if (modalPosition == KNSemiModalModalPositionBottom) {
         modalFinalYPosition = target.bounds.size.height;
     } else {
-        modalFinalYPosition = 0.0f-CGRectGetHeight(modal.frame);
+        modalFinalYPosition = 0.0f-CGRectGetHeight(modalView.frame);
     }
     
     [UIView animateWithDuration:duration animations:^{
         if (transitionStyle == KNSemiModalTransitionStyleSlide) {
             if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
                 // As the view is centered, we perform a vertical translation
-                modal.frame = CGRectMake((target.bounds.size.width - modal.frame.size.width) / 2.0, modalFinalYPosition, modal.frame.size.width, modal.frame.size.height);
+                modalView.frame = CGRectMake((target.bounds.size.width - modalView.frame.size.width) / 2.0, modalFinalYPosition, modalView.frame.size.width, modalView.frame.size.height);
             } else {
-                modal.frame = CGRectMake(0, modalFinalYPosition, modal.frame.size.width, modal.frame.size.height);
+                modalView.frame = CGRectMake(0, modalFinalYPosition, modalView.frame.size.width, modalView.frame.size.height);
             }
         } else if (transitionStyle == KNSemiModalTransitionStyleFadeOut || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
-            modal.alpha = 0.0;
+            modalView.alpha = 0.0;
         }
     } completion:^(BOOL finished) {
-        [overlay removeFromSuperview];
-        [modal removeFromSuperview];
+        [overlayView removeFromSuperview];
+        [modalView removeFromSuperview];
+        [backingView removeFromSuperview];
         
         // Child controller containment
         [vc removeFromParentViewController];
@@ -410,7 +421,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }];
     
     // Begin overlay animation
-    UIImageView * ss = (UIImageView*)[overlay.subviews objectAtIndex:0];
+    UIImageView * ss = (UIImageView*)[overlayView.subviews objectAtIndex:0];
 	if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
 		[ss.layer addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
 	}
@@ -476,9 +487,13 @@ static char const * const kYMStandardDefaultsTableName = "YMStandardDefaultsTabl
 - (id)ym_optionOrDefaultForKey:(NSString*)optionKey
 {
 	NSDictionary *options = objc_getAssociatedObject(self, kYMStandardOptionsTableName);
-	NSDictionary *defaults = objc_getAssociatedObject(self, kYMStandardDefaultsTableName);
-	NSAssert(defaults, @"Defaults must have been set when accessing options.");
-	return options[optionKey] ?: defaults[optionKey];
+    id value = options[optionKey];
+    if (value == nil) {
+        NSDictionary *defaults = objc_getAssociatedObject(self, kYMStandardDefaultsTableName);
+        NSAssert(defaults, @"Defaults must have been set when accessing options.");
+        value = defaults[optionKey];
+    }
+	return value;
 }
 @end
 
