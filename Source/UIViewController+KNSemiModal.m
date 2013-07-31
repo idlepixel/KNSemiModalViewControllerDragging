@@ -21,7 +21,10 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     .parentScaleFinal        = @"KNSemiModalOptionParentScaleFinal",
     .parentDisplacement      = @"KNSemiModalOptionParentDisplacement",
 	.shadowOpacity           = @"KNSemiModalOptionShadowOpacity",
-	.transitionStyle         = @"KNSemiModalTransitionStyle",
+	.transitionInStyle       = @"KNSemiModalTransitionInStyle",
+	.transitionOutStyle      = @"KNSemiModalTransitionOutStyle",
+	.transitionInDirection   = @"KNSemiModalTransitionInDirection",
+	.transitionOutDirection  = @"KNSemiModalTransitionOutDirection",
 	.modalPosition           = @"KNSemiModalModalPosition",
     .disableCancel           = @"KNSemiModalOptionDisableCancel",
     .backgroundColor         = @"KNSemiModalOptionBackgroundColor",
@@ -46,7 +49,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 @end
 
 @interface UIViewController (KNSemiModalInternal)
--(UIView*)parentTarget;
+-(UIView*)kn_parentTarget;
 -(CAAnimationGroup*)animationGroupForward:(BOOL)_forward;
 @end
 
@@ -62,7 +65,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	}
 	return target;
 }
--(UIView*)parentTarget {
+-(UIView*)kn_parentTarget
+{
     return [self kn_parentTargetViewController].view;
 }
 
@@ -93,7 +97,10 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
      KNSemiModalOptionKeys.parentScaleFinal : @(0.8),
      KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
      KNSemiModalOptionKeys.shadowOpacity : @(0.8),
-     KNSemiModalOptionKeys.transitionStyle : @(KNSemiModalTransitionStyleSlide),
+     KNSemiModalOptionKeys.transitionInStyle : @(KNSemiModalTransitionStyleSlide),
+     KNSemiModalOptionKeys.transitionOutStyle : @(KNSemiModalTransitionStyleSlide),
+     KNSemiModalOptionKeys.transitionInDirection : @(KNSemiModalTransitionDirectionAutomatic),
+     KNSemiModalOptionKeys.transitionOutDirection : @(KNSemiModalTransitionDirectionAutomatic),
      KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionBottom),
      KNSemiModalOptionKeys.disableCancel : @(NO),
      KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
@@ -113,7 +120,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     
     NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
     
-    double parentTranslate = [self parentTarget].frame.size.height*parentDisplacement;
+    double parentTranslate = [self kn_parentTarget].frame.size.height*parentDisplacement;
     animationAngle = -animationAngle*M_PI/180.0f;
     if (modalPosition == KNSemiModalModalPositionBottom) {
         parentTranslate *= -1.0f;
@@ -157,12 +164,12 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 }
 
 -(void)kn_interfaceOrientationDidChange:(NSNotification*)notification {
-	UIView *overlay = [[self parentTarget] viewWithTag:kSemiModalOverlayTag];
+	UIView *overlay = [[self kn_parentTarget] viewWithTag:kSemiModalOverlayTag];
 	[self kn_addOrUpdateParentScreenshotInView:overlay];
 }
 
 -(UIImageView*)kn_addOrUpdateParentScreenshotInView:(UIView*)screenshotContainer {
-	UIView *target = [self parentTarget];
+	UIView *target = [self kn_parentTarget];
 	UIView *semiView = [target viewWithTag:kSemiModalModalViewTag];
 	
 	screenshotContainer.hidden = YES; // screenshot without the overlay!
@@ -190,6 +197,97 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 @end
 
 @implementation UIViewController (KNSemiModal)
+
+-(KNSemiModalModalPosition)kn_modalPosition
+{
+    return [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
+}
+
+-(KNSemiModalTransitionStyle)kn_transitionInStyle
+{
+    return [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionInStyle] unsignedIntegerValue];
+}
+
+-(KNSemiModalTransitionStyle)kn_transitionOutStyle
+{
+    NSNumber *number = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionOutStyle];
+    KNSemiModalTransitionStyle style;
+    if (number != nil) {
+        style = number.unsignedIntegerValue;
+    } else {
+        style = [self kn_transitionInStyle];
+    }
+    return style;
+}
+
+-(KNSemiModalTransitionDirection)kn_determineTransitionDirectionFromStyle:(KNSemiModalTransitionStyle)style
+{
+    KNSemiModalTransitionDirection direction = KNSemiModalTransitionDirectionNone;
+    if (style == KNSemiModalTransitionStyleFade) {
+        direction = KNSemiModalTransitionDirectionNone;
+    } else {
+        KNSemiModalModalPosition position = [self kn_modalPosition];
+        switch (position) {
+            case KNSemiModalModalPositionTop:
+                direction = KNSemiModalTransitionDirectionFromTop;
+                break;
+                
+            default:
+                direction = KNSemiModalTransitionDirectionFromBottom;
+                break;
+        }
+    }
+    return direction;
+}
+
+-(KNSemiModalTransitionDirection)kn_transitionInDirection
+{
+    KNSemiModalTransitionDirection direction = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionInDirection] unsignedIntegerValue];
+    
+    if (direction == KNSemiModalTransitionDirectionAutomatic) {
+        direction = [self kn_determineTransitionDirectionFromStyle:[self kn_transitionInStyle]];
+    }
+    
+    return direction;
+}
+
+-(KNSemiModalTransitionDirection)kn_transitionOutDirection
+{
+    NSNumber *number = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionOutDirection];
+    KNSemiModalTransitionDirection direction;
+    if (number != nil) {
+        direction = number.unsignedIntegerValue;
+    } else {
+        direction = [self kn_transitionInDirection];
+    }
+    if (direction == KNSemiModalTransitionDirectionAutomatic) {
+        direction = [self kn_determineTransitionDirectionFromStyle:[self kn_transitionOutStyle]];
+    }
+    
+    return direction;
+}
+
+-(NSTimeInterval)kn_animationDuration
+{
+    return [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
+}
+
+-(NSTimeInterval)kn_animationInDuration
+{
+    return [self kn_animationDuration];
+}
+
+-(NSTimeInterval)kn_animationOutDuration
+{
+    NSNumber *outDuration = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationOutDuration];
+    NSTimeInterval duration = 0.0f;
+    if (outDuration != nil) {
+        duration = outDuration.doubleValue;
+    } else {
+        duration = [self kn_animationDuration];
+    }
+    return duration;
+}
 
 -(void)presentSemiViewController:(UIViewController*)vc {
 	[self presentSemiViewController:vc withOptions:nil completion:nil dismissBlock:nil];
@@ -233,7 +331,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		   withOptions:(NSDictionary*)options
 			completion:(KNTransitionCompletionBlock)completion {
 	[self kn_registerDefaultsAndOptions:options]; // re-registering is OK
-	UIView * target = [self parentTarget];
+	UIView * target = [self kn_parentTarget];
 	
     if (![target.subviews containsObject:view]) {
         // Set associative object
@@ -245,40 +343,68 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
                                                      name:UIDeviceOrientationDidChangeNotification
                                                    object:nil];
         // Get transition style
-        NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
+        KNSemiModalTransitionStyle transitionStyle = [self kn_transitionInStyle];
+        
+        // Get the direction
+        KNSemiModalTransitionDirection transitionDirection = [self kn_transitionInDirection];
         
         // Get the modal position
-        NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
+        KNSemiModalModalPosition modalPosition = [self kn_modalPosition];
         
         BOOL useParentWidth = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.useParentWidth] boolValue];
         
         CGFloat statusBarHeight = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.statusBarHeight] doubleValue];
         
         // Calulate all frames
-        CGFloat semiViewHeight = view.frame.size.height;
+        CGFloat modalHeight = view.frame.size.height;
         CGRect targetBounds = target.bounds;
         CGFloat targetHeight = CGRectGetHeight(targetBounds) - statusBarHeight;
-        CGRect semiViewFrame;
+        CGRect modalFrameFinal;
+        CGRect modalFrameInitial;
+        
         if (useParentWidth) {
-            semiViewFrame = CGRectMake(0.0f, 0.0f, targetBounds.size.width, semiViewHeight);
+            modalFrameFinal = CGRectMake(0.0f, 0.0f, targetBounds.size.width, modalHeight);
         } else {
             // We center the view and mantain aspect ratio
-            semiViewFrame = CGRectMake((targetBounds.size.width - view.frame.size.width) / 2.0, 0.0f, view.frame.size.width, semiViewHeight);
+            modalFrameFinal = CGRectMake((targetBounds.size.width - view.frame.size.width) / 2.0, 0.0f, view.frame.size.width, modalHeight);
         }
         
-        CGFloat modalPositionModifier = -1.0f;
-        
-        if (modalPosition == KNSemiModalModalPositionTop) {
-            semiViewFrame.origin.y = statusBarHeight;
-            
-        } else if (modalPosition == KNSemiModalModalPositionCentered) {
-            semiViewFrame.origin.y = statusBarHeight + floor((targetHeight-semiViewHeight)/2.0f);
-            modalPositionModifier = 1.0f;
-            
-        } else {
-            semiViewFrame.origin.y = statusBarHeight + targetHeight-semiViewHeight;
-            modalPositionModifier = 1.0f;
+        switch (modalPosition) {
+            case KNSemiModalModalPositionTop:
+                modalFrameFinal.origin.y = statusBarHeight;
+                break;
+            case KNSemiModalModalPositionCenter:
+                modalFrameFinal.origin.y = statusBarHeight + floor((targetHeight - modalHeight) / 2.0f);
+                break;
+                
+            default:
+                modalFrameFinal.origin.y = statusBarHeight + targetHeight-modalHeight;
+                break;
         }
+        
+        modalFrameInitial = modalFrameFinal;
+        
+        if (transitionStyle == KNSemiModalTransitionStyleFade) transitionDirection = KNSemiModalTransitionDirectionNone;
+        
+        switch (transitionDirection) {
+            case KNSemiModalTransitionDirectionFromTop:
+                modalFrameInitial.origin.y = -modalHeight;
+                break;
+            case KNSemiModalTransitionDirectionFromBottom:
+                modalFrameInitial.origin.y = statusBarHeight + targetHeight;
+                break;
+            case KNSemiModalTransitionDirectionFromLeft:
+                modalFrameInitial.origin.x = -CGRectGetWidth(modalFrameFinal);
+                break;
+            case KNSemiModalTransitionDirectionFromRight:
+                modalFrameInitial.origin.x = CGRectGetWidth(targetBounds);
+                break;
+                
+            default:
+                break;
+        }
+        
+        
         
         // Add semi overlay
         UIView * overlay = [[UIView alloc] initWithFrame:target.bounds];
@@ -306,16 +432,14 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
 			[ss.layer addAnimation:[self animationGroupForward:YES] forKey:@"pushedBackAnimation"];
 		}
-		NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
+		NSTimeInterval duration = [self kn_animationInDuration];
         [UIView animateWithDuration:duration animations:^{
             ss.alpha = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentAlpha] floatValue];
         }];
         
         // Present view animated
-        view.frame = (transitionStyle == KNSemiModalTransitionStyleSlide
-                      ? CGRectOffset(semiViewFrame, 0, +modalPositionModifier*semiViewHeight)
-                      : semiViewFrame);
-        if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
+        
+        if (transitionStyle == KNSemiModalTransitionStyleFade) {
             view.alpha = 0.0;
         }
         
@@ -332,6 +456,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         backingView.tag = kSemiModalModalBackingViewTag;
         [target addSubview:backingView];
         
+        view.frame = modalFrameInitial;
+        
         view.tag = kSemiModalModalViewTag;
         [target addSubview:view];
         view.layer.shadowColor = [[UIColor blackColor] CGColor];
@@ -345,12 +471,9 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         backingView.backgroundColor = [UIColor clearColor];
         
         [UIView animateWithDuration:duration animations:^{
-            if (transitionStyle == KNSemiModalTransitionStyleSlide) {
-                view.frame = semiViewFrame;
-                backingView.frame = semiViewFrame;
-            } else if (transitionStyle == KNSemiModalTransitionStyleFadeIn || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
-                view.alpha = 1.0;
-            }
+            view.frame = modalFrameFinal;
+            backingView.frame = modalFrameFinal;
+            view.alpha = 1.0;
         } completion:^(BOOL finished) {
             if (!finished) return;
             [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidShowNotification
@@ -381,20 +504,19 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }
 
     // Correct target for dismissal
-    UIView * target = [self parentTarget];
+    UIView * target = [self kn_parentTarget];
     UIView * modalView = [target.subviews objectAtIndex:target.subviews.count-1];
     UIView * backingView = [target.subviews objectAtIndex:target.subviews.count-2];
     UIView * overlayView = [target.subviews objectAtIndex:target.subviews.count-3];
-	NSUInteger transitionStyle = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.transitionStyle] unsignedIntegerValue];
-    NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
+	
+    // Get transition style
+    KNSemiModalTransitionStyle transitionStyle = [self kn_transitionOutStyle];
     
-    NSNumber *outDuration = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationOutDuration];
-    NSTimeInterval duration = 0.0f;
-    if (outDuration != nil) {
-        duration = outDuration.doubleValue;
-    } else {
-        duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
-    }
+    // Get the direction
+    KNSemiModalTransitionDirection transitionDirection = [self kn_transitionOutDirection];
+    
+    NSTimeInterval duration = [self kn_animationOutDuration];
+    
 	UIViewController *vc = objc_getAssociatedObject(self, kSemiModalViewController);
 	KNTransitionCompletionBlock dismissBlock = objc_getAssociatedObject(self, kSemiModalDismissBlock);
 	
@@ -403,23 +525,36 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	if ([vc respondsToSelector:@selector(beginAppearanceTransition:animated:)]) {
 		[vc beginAppearanceTransition:NO animated:YES]; // iOS 6
 	}
-	
-    CGFloat modalFinalYPosition;
-    if (modalPosition == KNSemiModalModalPositionBottom || modalPosition == KNSemiModalModalPositionCentered) {
-        modalFinalYPosition = target.bounds.size.height;
-    } else {
-        modalFinalYPosition = 0.0f-CGRectGetHeight(modalView.frame);
+    
+    CGRect modalFrameFinal = modalView.frame;
+    
+    if (transitionStyle == KNSemiModalTransitionStyleFade) transitionDirection = KNSemiModalTransitionDirectionNone;
+    
+    switch (transitionDirection) {
+        case KNSemiModalTransitionDirectionFromTop:
+            modalFrameFinal.origin.y = -CGRectGetHeight(modalFrameFinal);
+            break;
+        case KNSemiModalTransitionDirectionFromBottom:
+            modalFrameFinal.origin.y = CGRectGetHeight(target.bounds);
+            break;
+        case KNSemiModalTransitionDirectionFromLeft:
+            modalFrameFinal.origin.x = -CGRectGetWidth(modalFrameFinal);
+            break;
+        case KNSemiModalTransitionDirectionFromRight:
+            modalFrameFinal.origin.x = CGRectGetWidth(target.bounds);
+            break;
+            
+        default:
+            break;
     }
     
+    CGFloat finalAlpha = modalView.alpha;
+    
+    if (transitionStyle == KNSemiModalTransitionStyleFade) finalAlpha = 0.0f;
+    
     [UIView animateWithDuration:duration animations:^{
-        if (transitionStyle == KNSemiModalTransitionStyleSlide) {
-            
-            CGRect modalFrame = modalView.frame;
-            modalFrame.origin.y = modalFinalYPosition;
-            modalView.frame = modalFrame;
-        } else if (transitionStyle == KNSemiModalTransitionStyleFadeOut || transitionStyle == KNSemiModalTransitionStyleFadeInOut) {
-            modalView.alpha = 0.0;
-        }
+        modalView.alpha = finalAlpha;
+        modalView.frame = modalFrameFinal;
     } completion:^(BOOL finished) {
         [overlayView removeFromSuperview];
         [modalView removeFromSuperview];
@@ -447,7 +582,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		[ss.layer addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
 	}
     [UIView animateWithDuration:duration animations:^{
-        ss.alpha = 1;
+        ss.alpha = 1.0f;
     } completion:^(BOOL finished) {
         if(finished){
             [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
@@ -461,7 +596,12 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 
 - (void)resizeSemiView:(CGSize)newSize
 {
-    UIView * target = [self parentTarget];
+    [self resizeSemiView:newSize duration:[self kn_animationDuration]];
+}
+
+- (void)resizeSemiView:(CGSize)newSize duration:(NSTimeInterval)duration
+{
+    UIView * target = [self kn_parentTarget];
     UIView * modalView = [target.subviews objectAtIndex:target.subviews.count-1];
     UIView * backingView = [target.subviews objectAtIndex:target.subviews.count-2];
     CGRect mf = modalView.frame;
@@ -482,12 +622,11 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     NSUInteger modalPosition = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.modalPosition] unsignedIntegerValue];
     if (modalPosition == KNSemiModalModalPositionTop) {
         mf.origin.y = statusBarHeight;
-    } else if (modalPosition == KNSemiModalModalPositionCentered) {
+    } else if (modalPosition == KNSemiModalModalPositionCenter) {
         mf.origin.y = statusBarHeight + floor((targetFrame.size.height - statusBarHeight - mf.size.height)/2.0f);
     } else {
         mf.origin.y = target.frame.size.height - mf.size.height;
     }
-    NSTimeInterval duration = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.animationDuration] doubleValue];
 	[UIView animateWithDuration:duration animations:^{
         modalView.frame = mf;
         backingView.frame = mf;

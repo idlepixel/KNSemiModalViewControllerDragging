@@ -23,7 +23,10 @@ extern const struct KNSemiModalOptionKeys {
     __unsafe_unretained NSString *parentScaleFinal;         // boxed double default is 0.8
     __unsafe_unretained NSString *parentDisplacement;       // boxed double, as percentage. default is 0.08 (0.04 for iPad).
 	__unsafe_unretained NSString *shadowOpacity;            // default is 0.8
-	__unsafe_unretained NSString *transitionStyle;          // boxed NSNumber - one of the KNSemiModalTransitionStyle values.
+	__unsafe_unretained NSString *transitionInStyle;        // boxed NSNumber - one of the KNSemiModalTransitionStyle values. default is KNSemiModalTransitionStyleSlide.
+	__unsafe_unretained NSString *transitionOutStyle;       // boxed NSNumber - one of the KNSemiModalTransitionStyle values. default is KNSemiModalTransitionStyleAutomatic.
+	__unsafe_unretained NSString *transitionInDirection;    // boxed NSNumber - one of the KNSemiModalTransitionDirection values. default is KNSemiModalTransitionDirectionAutomatic.
+	__unsafe_unretained NSString *transitionOutDirection;   // boxed NSNumber - one of the KNSemiModalTransitionDirection values. default is KNSemiModalTransitionDirectionAutomatic.
 	__unsafe_unretained NSString *modalPosition;            // boxed NSNumber - one of the KNSemiModalModalPosition values.
     __unsafe_unretained NSString *disableCancel;            // boxed BOOL. default is NO.
 	__unsafe_unretained NSString *backgroundColor;          // default is [UIColor blackColor].
@@ -31,17 +34,25 @@ extern const struct KNSemiModalOptionKeys {
     __unsafe_unretained NSString *statusBarHeight;          // boxed double. default is 20.0f.
 } KNSemiModalOptionKeys;
 
-NS_ENUM(NSUInteger, KNSemiModalTransitionStyle) {
+typedef NS_ENUM(NSUInteger, KNSemiModalTransitionStyle) {
+	KNSemiModalTransitionStyleAutomatic,
 	KNSemiModalTransitionStyleSlide,
-	KNSemiModalTransitionStyleFadeInOut,
-	KNSemiModalTransitionStyleFadeIn,
-	KNSemiModalTransitionStyleFadeOut,
+	KNSemiModalTransitionStyleFade,
 };
 
-NS_ENUM(NSUInteger, KNSemiModalModalPosition) {
+typedef NS_ENUM(NSUInteger, KNSemiModalTransitionDirection) {
+	KNSemiModalTransitionDirectionAutomatic,
+	KNSemiModalTransitionDirectionNone,
+	KNSemiModalTransitionDirectionFromTop,
+	KNSemiModalTransitionDirectionFromBottom,
+	KNSemiModalTransitionDirectionFromLeft,
+	KNSemiModalTransitionDirectionFromRight
+};
+
+typedef NS_ENUM(NSUInteger, KNSemiModalModalPosition) {
 	KNSemiModalModalPositionTop,
 	KNSemiModalModalPositionBottom,
-	KNSemiModalModalPositionCentered
+	KNSemiModalModalPositionCenter
 };
 
 typedef void (^KNTransitionCompletionBlock)(void);
@@ -87,6 +98,7 @@ typedef void (^KNTransitionCompletionBlock)(void);
 
 // Dismiss & resize
 -(void)resizeSemiView:(CGSize)newSize;
+-(void)resizeSemiView:(CGSize)newSize duration:(NSTimeInterval)duration;
 -(void)dismissSemiModalView;
 -(void)dismissSemiModalViewWithCompletion:(KNTransitionCompletionBlock)completion;
 
