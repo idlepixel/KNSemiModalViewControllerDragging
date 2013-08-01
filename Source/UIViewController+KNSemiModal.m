@@ -40,6 +40,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 #define kSemiModalModalViewTag             10003
 #define kSemiModalModalBackingViewTag      10004
 #define kSemiModalDismissButtonTag         10005
+#define kSemiModalOverlayBackgroundTag     10006
 
 @interface NSObject (YMOptionsAndDefaults)
 
@@ -404,16 +405,38 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
                 break;
         }
         
-        
+        BOOL pushParentBack = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue];
+        CGFloat parentAlpha = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentAlpha] floatValue];
         
         // Add semi overlay
         UIView * overlay = [[UIView alloc] initWithFrame:target.bounds];
-        overlay.backgroundColor = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.backgroundColor];
+        overlay.backgroundColor = [UIColor clearColor];
         overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         overlay.tag = kSemiModalOverlayTag;
         
+        UIView * overlayBackground = nil;
+        UIView *fadedView = nil;
+        
+        UIColor *backgroundColor = [self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.backgroundColor];
+        
+        UIImageView *screenshotImageView = nil;
+        
         // Take screenshot and scale
-        UIImageView *ss = [self kn_addOrUpdateParentScreenshotInView:overlay];
+        if (pushParentBack) {
+            screenshotImageView = [self kn_addOrUpdateParentScreenshotInView:overlay];
+            overlay.backgroundColor = backgroundColor;
+            fadedView = screenshotImageView;
+        } else {
+            overlayBackground = [[UIView alloc] initWithFrame:overlay.bounds];
+            overlayBackground.tag = kSemiModalOverlayBackgroundTag;
+            overlayBackground.backgroundColor = backgroundColor;
+            overlayBackground.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            overlayBackground.alpha = 0.0f;
+            
+            parentAlpha = RANGE(0.0f, (1.0f - parentAlpha), 1.0f);
+            fadedView = overlayBackground;
+        }
+        [overlay addSubview:overlayBackground];
         [target addSubview:overlay];
         
         // Dismiss button (if allow)
@@ -429,12 +452,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         }
         
         // Begin overlay animation
-		if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
-			[ss.layer addAnimation:[self animationGroupForward:YES] forKey:@"pushedBackAnimation"];
+		if (pushParentBack) {
+			[screenshotImageView.layer addAnimation:[self animationGroupForward:YES] forKey:@"pushedBackAnimation"];
 		}
 		NSTimeInterval duration = [self kn_animationInDuration];
+        
         [UIView animateWithDuration:duration animations:^{
-            ss.alpha = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentAlpha] floatValue];
+            fadedView.alpha = parentAlpha;
         }];
         
         // Present view animated
@@ -577,21 +601,37 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }];
     
     // Begin overlay animation
-    UIImageView * ss = (UIImageView*)[overlayView.subviews objectAtIndex:0];
-	if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
-		[ss.layer addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
-	}
-    [UIView animateWithDuration:duration animations:^{
-        ss.alpha = 1.0f;
-    } completion:^(BOOL finished) {
-        if(finished){
-            [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
-                                                                object:self];
-            if (completion) {
-                completion();
-            }
+    UIImageView * screenshotView = (UIImageView*)[overlayView viewWithTag:kSemiModalScreenshotTag];
+    if (screenshotView != nil) {
+        if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue]) {
+            [screenshotView.layer addAnimation:[self animationGroupForward:NO] forKey:@"bringForwardAnimation"];
         }
-    }];
+        [UIView animateWithDuration:duration animations:^{
+            screenshotView.alpha = 1.0f;
+        } completion:^(BOOL finished) {
+            if(finished){
+                [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
+                                                                    object:self];
+                if (completion) {
+                    completion();
+                }
+            }
+        }];
+    } else {
+        UIView * overlayBackgroundView = [overlayView viewWithTag:kSemiModalOverlayBackgroundTag];
+        
+        [UIView animateWithDuration:duration animations:^{
+            overlayBackgroundView.alpha = 0.0f;
+        } completion:^(BOOL finished) {
+            if(finished){
+                [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
+                                                                    object:self];
+                if (completion) {
+                    completion();
+                }
+            }
+        }];
+    }
 }
 
 - (void)resizeSemiView:(CGSize)newSize
