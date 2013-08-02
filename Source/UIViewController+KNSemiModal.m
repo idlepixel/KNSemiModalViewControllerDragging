@@ -165,8 +165,11 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 }
 
 -(void)kn_interfaceOrientationDidChange:(NSNotification*)notification {
-	UIView *overlay = [[self kn_parentTarget] viewWithTag:kSemiModalOverlayTag];
-	[self kn_addOrUpdateParentScreenshotInView:overlay];
+    BOOL pushParentBack = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue];
+    if (pushParentBack) {
+        UIView *overlay = [[self kn_parentTarget] viewWithTag:kSemiModalOverlayTag];
+        [self kn_addOrUpdateParentScreenshotInView:overlay];
+    }
 }
 
 -(UIImageView*)kn_addOrUpdateParentScreenshotInView:(UIView*)screenshotContainer {
