@@ -35,6 +35,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 #define kSemiModalViewController           @"PaPQC93kjgzUanz"
 #define kSemiModalDismissBlock             @"l27h7RU2dzVfPoQ"
 #define kSemiModalPresentingViewController @"QKWuTQjUkWaO1Xr"
+#define kSemiModalModalContainerView       @"1XrQTUkWQjKaOWu"
 #define kSemiModalOverlayTag               10001
 #define kSemiModalScreenshotTag            10002
 #define kSemiModalModalViewTag             10003
@@ -49,32 +50,32 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 
 @end
 
-@interface UIViewController (KNSemiModalInternal)
--(UIView*)kn_parentTarget;
--(CAAnimationGroup*)animationGroupForward:(BOOL)_forward;
+@interface NSObject (KNSemiModalInternal)
+
+-(NSDictionary *)kn_semiModelDefaultsDictionary;
+
 @end
 
-@implementation UIViewController (KNSemiModalInternal)
+// a simple subclass to hold the model sub-views
 
--(UIViewController*)kn_parentTargetViewController {
-	UIViewController * target = self;
-	if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.traverseParentHierarchy] boolValue]) {
-		// cover UINav & UITabbar as well
-		while (target.parentViewController != nil) {
-			target = target.parentViewController;
-		}
-	}
-	return target;
-}
--(UIView*)kn_parentTarget
+@interface KNSemiModalContainerView : UIView
+@end
+
+@implementation KNSemiModalContainerView
+@end
+
+@interface UIViewController (KNSemiModalInternal)
+
+-(UIView*)kn_parentTarget;
+-(KNSemiModalContainerView *)kn_containerViewForTarget:(UIView *)target;
+-(CAAnimationGroup*)animationGroupForward:(BOOL)_forward;
+
+@end
+
+@implementation NSObject (KNSemiModalInternal)
+
+-(NSDictionary *)kn_semiModelDefaultsDictionary
 {
-    return [self kn_parentTargetViewController].view;
-}
-
-#pragma mark Options and defaults
-
--(void)kn_registerDefaultsAndOptions:(NSDictionary*)options {
-    
     double animationAngle = 15.0f;
     double parentDisplacement = 0.08f;
     BOOL useParentWidth = YES;
@@ -84,30 +85,52 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         parentDisplacement = 0.04f;
         useParentWidth = NO;
     }
-    //animationAngle = 0.0;
-    //parentDisplacement = 0.0;
-    
-    
-	[self ym_registerOptions:options defaults:@{
-     KNSemiModalOptionKeys.traverseParentHierarchy : @(YES),
-     KNSemiModalOptionKeys.pushParentBack : @(YES),
-     KNSemiModalOptionKeys.animationDuration : @(0.5),
-     KNSemiModalOptionKeys.animationAngle : @(animationAngle),
-     KNSemiModalOptionKeys.parentAlpha : @(0.5),
-     KNSemiModalOptionKeys.parentScaleInitial : @(0.95),
-     KNSemiModalOptionKeys.parentScaleFinal : @(0.8),
-     KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
-     KNSemiModalOptionKeys.shadowOpacity : @(0.8),
-     KNSemiModalOptionKeys.transitionInStyle : @(KNSemiModalTransitionStyleSlide),
-     KNSemiModalOptionKeys.transitionOutStyle : @(KNSemiModalTransitionStyleSlide),
-     KNSemiModalOptionKeys.transitionInDirection : @(KNSemiModalTransitionDirectionAutomatic),
-     KNSemiModalOptionKeys.transitionOutDirection : @(KNSemiModalTransitionDirectionAutomatic),
-     KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionBottom),
-     KNSemiModalOptionKeys.disableCancel : @(NO),
-     KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
-     KNSemiModalOptionKeys.useParentWidth : @(useParentWidth),
-     KNSemiModalOptionKeys.statusBarHeight : @(20.0f),
-	 }];
+    return @{
+             KNSemiModalOptionKeys.traverseParentHierarchy : @(YES),
+             KNSemiModalOptionKeys.pushParentBack : @(YES),
+             KNSemiModalOptionKeys.animationDuration : @(0.5),
+             KNSemiModalOptionKeys.animationAngle : @(animationAngle),
+             KNSemiModalOptionKeys.parentAlpha : @(0.5),
+             KNSemiModalOptionKeys.parentScaleInitial : @(0.95),
+             KNSemiModalOptionKeys.parentScaleFinal : @(0.8),
+             KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
+             KNSemiModalOptionKeys.shadowOpacity : @(0.8),
+             KNSemiModalOptionKeys.transitionInStyle : @(KNSemiModalTransitionStyleSlide),
+             KNSemiModalOptionKeys.transitionOutStyle : @(KNSemiModalTransitionStyleSlide),
+             KNSemiModalOptionKeys.transitionInDirection : @(KNSemiModalTransitionDirectionAutomatic),
+             KNSemiModalOptionKeys.transitionOutDirection : @(KNSemiModalTransitionDirectionAutomatic),
+             KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionBottom),
+             KNSemiModalOptionKeys.disableCancel : @(NO),
+             KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
+             KNSemiModalOptionKeys.useParentWidth : @(useParentWidth),
+             KNSemiModalOptionKeys.statusBarHeight : @(20.0f),
+             };
+}
+
+@end
+
+@implementation UIViewController (KNSemiModalInternal)
+
+-(UIViewController*)kn_parentTargetViewController {
+	UIViewController * target = self;
+	if ([[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.traverseParentHierarchy] boolValue]) {
+        // cover UINav & UITabbar as well
+		while (target.parentViewController != nil) {
+			target = target.parentViewController;
+		}
+    }
+	return target;
+}
+-(UIView*)kn_parentTarget
+{
+    return [self kn_parentTargetViewController].view;
+}
+
+#pragma mark Options and defaults
+
+-(void)kn_registerDefaultsAndOptions:(NSDictionary*)options
+{
+	[self ym_registerOptions:options defaults:[self kn_semiModelDefaultsDictionary]];
 }
 
 #pragma mark Push-back animation group
@@ -196,6 +219,21 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		[screenshotContainer addSubview:screenshot];
 	}
 	return screenshot;
+}
+
+-(KNSemiModalContainerView *)kn_containerViewForTarget:(UIView *)target
+{
+    NSArray *subviews = target.subviews;
+    if (subviews.count > 0) {
+        UIView *subview = nil;
+        for (NSInteger i = subviews.count - 1; i >= 0; i--) {
+            subview = [subviews objectAtIndex:i];
+            if ([subview isKindOfClass:[KNSemiModalContainerView class]]) {
+                return (KNSemiModalContainerView *)subview;
+            }
+        }
+    }
+    return nil;
 }
 
 @end
@@ -328,19 +366,21 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 -(void)presentSemiView:(UIView*)view {
 	[self presentSemiView:view withOptions:nil completion:nil];
 }
+
 -(void)presentSemiView:(UIView*)view withOptions:(NSDictionary*)options {
 	[self presentSemiView:view withOptions:options completion:nil];
 }
+
 -(void)presentSemiView:(UIView*)view
 		   withOptions:(NSDictionary*)options
 			completion:(KNTransitionCompletionBlock)completion {
 	[self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIView * target = [self kn_parentTarget];
-	
-    if (![target.subviews containsObject:view]) {
+	KNSemiModalContainerView *containerView = [self kn_containerViewForTarget:target];
+    if (![target.subviews containsObject:view] && ![containerView.subviews containsObject:view]) {
         // Set associative object
         objc_setAssociatedObject(view, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-
+        
         // Register for orientation changes, so we can update the presenting controller screenshot
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(kn_interfaceOrientationDidChange:)
@@ -411,8 +451,17 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         BOOL pushParentBack = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.pushParentBack] boolValue];
         CGFloat parentAlpha = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.parentAlpha] floatValue];
         
+        // Container
+        
+        containerView = [[KNSemiModalContainerView alloc] initWithFrame:targetBounds];
+        containerView.backgroundColor = [UIColor clearColor];
+        containerView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [target addSubview:containerView];
+        
+        objc_setAssociatedObject(self, kSemiModalModalContainerView, containerView, OBJC_ASSOCIATION_ASSIGN);
+        
         // Add semi overlay
-        UIView * overlay = [[UIView alloc] initWithFrame:target.bounds];
+        UIView * overlay = [[UIView alloc] initWithFrame:targetBounds];
         overlay.backgroundColor = [UIColor clearColor];
         overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         overlay.tag = kSemiModalOverlayTag;
@@ -440,7 +489,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             fadedView = overlayBackground;
         }
         [overlay addSubview:overlayBackground];
-        [target addSubview:overlay];
+        [containerView addSubview:overlay];
         
         // Dismiss button (if allow)
         if(![[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.disableCancel] boolValue]) {
@@ -481,12 +530,12 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         backingView.userInteractionEnabled = YES;
         backingView.exclusiveTouch = YES;
         backingView.tag = kSemiModalModalBackingViewTag;
-        [target addSubview:backingView];
+        [containerView addSubview:backingView];
         
         view.frame = modalFrameInitial;
         
         view.tag = kSemiModalModalViewTag;
-        [target addSubview:view];
+        [containerView addSubview:view];
         view.layer.shadowColor = [[UIColor blackColor] CGColor];
         view.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
         view.layer.shadowRadius = 8.0;
@@ -529,12 +578,20 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         [presentingController dismissSemiModalViewWithCompletion:completion];
         return;
     }
-
-    // Correct target for dismissal
-    UIView * target = [self kn_parentTarget];
-    UIView * modalView = [target.subviews objectAtIndex:target.subviews.count-1];
-    UIView * backingView = [target.subviews objectAtIndex:target.subviews.count-2];
-    UIView * overlayView = [target.subviews objectAtIndex:target.subviews.count-3];
+    
+    KNSemiModalContainerView *containerView = objc_getAssociatedObject(self, kSemiModalModalContainerView);
+    
+    if (containerView == nil) {
+        // Correct target for dismissal
+        UIView * target = [self kn_parentTarget];
+        containerView = [self kn_containerViewForTarget:target];
+    }
+    
+    if (containerView == nil) return;
+    
+    UIView * modalView = [containerView.subviews objectAtIndex:2];
+    UIView * backingView = [containerView.subviews objectAtIndex:1];
+    UIView * overlayView = [containerView.subviews objectAtIndex:0];
 	
     // Get transition style
     KNSemiModalTransitionStyle transitionStyle = [self kn_transitionOutStyle];
@@ -562,13 +619,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             modalFrameFinal.origin.y = -CGRectGetHeight(modalFrameFinal);
             break;
         case KNSemiModalTransitionDirectionFromBottom:
-            modalFrameFinal.origin.y = CGRectGetHeight(target.bounds);
+            modalFrameFinal.origin.y = CGRectGetHeight(containerView.bounds);
             break;
         case KNSemiModalTransitionDirectionFromLeft:
             modalFrameFinal.origin.x = -CGRectGetWidth(modalFrameFinal);
             break;
         case KNSemiModalTransitionDirectionFromRight:
-            modalFrameFinal.origin.x = CGRectGetWidth(target.bounds);
+            modalFrameFinal.origin.x = CGRectGetWidth(containerView.bounds);
             break;
             
         default:
@@ -586,6 +643,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         [overlayView removeFromSuperview];
         [modalView removeFromSuperview];
         [backingView removeFromSuperview];
+        [containerView removeFromSuperview];
         
         // Child controller containment
         [vc removeFromParentViewController];
@@ -645,8 +703,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 - (void)resizeSemiView:(CGSize)newSize duration:(NSTimeInterval)duration
 {
     UIView * target = [self kn_parentTarget];
-    UIView * modalView = [target.subviews objectAtIndex:target.subviews.count-1];
-    UIView * backingView = [target.subviews objectAtIndex:target.subviews.count-2];
+    
+    KNSemiModalContainerView *containerView = [self kn_containerViewForTarget:target];
+    
+    if (containerView == nil) return;
+    
+    UIView * modalView = [containerView.subviews objectAtIndex:2];
+    UIView * backingView = [containerView.subviews objectAtIndex:1];
     CGRect mf = modalView.frame;
     
     CGRect targetFrame = target.frame;
@@ -710,7 +773,7 @@ static char const * const kYMStandardDefaultsTableName = "YMStandardDefaultsTabl
     id value = options[optionKey];
     if (value == nil) {
         NSDictionary *defaults = objc_getAssociatedObject(self, kYMStandardDefaultsTableName);
-        NSAssert(defaults, @"Defaults must have been set when accessing options.");
+        if (!defaults) defaults = [self kn_semiModelDefaultsDictionary];
         value = defaults[optionKey];
     }
 	return value;
@@ -725,6 +788,7 @@ static char const * const kYMStandardDefaultsTableName = "YMStandardDefaultsTabl
 // Adapted from: http://stackoverflow.com/questions/1340434/get-to-uiviewcontroller-from-uiview-on-iphone
 
 @implementation UIView (FindUIViewController)
+
 - (UIViewController *) containingViewController {
     UIView * target = self.superview ? self.superview : self;
     return (UIViewController *)[target traverseResponderChainForUIViewController];
@@ -745,4 +809,19 @@ static char const * const kYMStandardDefaultsTableName = "YMStandardDefaultsTabl
         return nil;
     }
 }
+
+@end
+
+@implementation UIView (KNSemiModal)
+
+- (BOOL) containedWithinSemiModalSuperview
+{
+    UIView *v = self;
+    do {
+        if ([v isKindOfClass:[KNSemiModalContainerView class]]) return YES;
+        v = v.superview;
+    } while (v != nil);
+    return NO;
+}
+
 @end

@@ -110,3 +110,9 @@ typedef void (^KNTransitionCompletionBlock)(void);
 - (UIViewController *) containingViewController;
 - (id) traverseResponderChainForUIViewController;
 @end
+
+@interface UIView (KNSemiModal)
+
+@property (readonly) BOOL containedWithinSemiModalSuperview;
+
+@end
