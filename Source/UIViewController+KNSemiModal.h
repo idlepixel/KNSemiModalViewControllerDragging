@@ -32,6 +32,8 @@ extern const struct KNSemiModalOptionKeys {
 	__unsafe_unretained NSString *backgroundColor;          // default is [UIColor blackColor].
     __unsafe_unretained NSString *useParentWidth;           // boxed BOOL. default is YES (NO for iPad).
     __unsafe_unretained NSString *statusBarHeight;          // boxed double. default is 20.0f.
+    __unsafe_unretained NSString *customWidth;              // boxed double. default is -1.0f.
+    __unsafe_unretained NSString *customHeight;             // boxed double. default is -1.0f.
 } KNSemiModalOptionKeys;
 
 typedef NS_ENUM(NSUInteger, KNSemiModalTransitionStyle) {

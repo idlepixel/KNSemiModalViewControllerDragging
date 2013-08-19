@@ -30,6 +30,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     .backgroundColor         = @"KNSemiModalOptionBackgroundColor",
     .useParentWidth          = @"KNSemiModalOptionUseParentWidth",
     .statusBarHeight         = @"KNSemiModalOptionStatusBarHeight",
+    .customWidth             = @"KNSemiModalOptionCustomWidth",
+    .customHeight            = @"KNSemiModalOptionCustomHeight",
 };
 
 #define kSemiModalViewController           @"PaPQC93kjgzUanz"
@@ -104,6 +106,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
              KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
              KNSemiModalOptionKeys.useParentWidth : @(useParentWidth),
              KNSemiModalOptionKeys.statusBarHeight : @(20.0f),
+             KNSemiModalOptionKeys.customWidth : @(-1.0f),
+             KNSemiModalOptionKeys.customHeight : @(-1.0f),
              };
 }
 
@@ -371,15 +375,15 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	[self presentSemiView:view withOptions:options completion:nil];
 }
 
--(void)presentSemiView:(UIView*)view
+-(void)presentSemiView:(UIView*)modalView
 		   withOptions:(NSDictionary*)options
 			completion:(KNTransitionCompletionBlock)completion {
 	[self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIView * target = [self kn_parentTarget];
 	KNSemiModalContainerView *containerView = [self kn_containerViewForTarget:target];
-    if (![target.subviews containsObject:view] && ![containerView.subviews containsObject:view]) {
+    if (![target.subviews containsObject:modalView] && ![containerView.subviews containsObject:modalView]) {
         // Set associative object
-        objc_setAssociatedObject(view, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(modalView, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
         // Register for orientation changes, so we can update the presenting controller screenshot
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -400,17 +404,31 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         CGFloat statusBarHeight = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.statusBarHeight] doubleValue];
         
         // Calulate all frames
-        CGFloat modalHeight = view.frame.size.height;
+        CGRect modalFrame = modalView.frame;
+        
+        CGFloat customWidth = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.customWidth] doubleValue];
+        CGFloat customHeight = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.customHeight] doubleValue];
+        
+        if (customWidth > 0.0f) {
+            modalFrame = CGRectSetWidth(modalFrame, customWidth);
+        }
+        
+        if (customHeight > 0.0f) {
+            modalFrame = CGRectSetHeight(modalFrame, customHeight);
+        }
+        
+        CGFloat modalHeight = modalFrame.size.height;
         CGRect targetBounds = target.bounds;
         CGFloat targetHeight = CGRectGetHeight(targetBounds) - statusBarHeight;
         CGRect modalFrameFinal;
         CGRect modalFrameInitial;
         
+        
         if (useParentWidth) {
             modalFrameFinal = CGRectMake(0.0f, 0.0f, targetBounds.size.width, modalHeight);
         } else {
             // We center the view and mantain aspect ratio
-            modalFrameFinal = CGRectMake((targetBounds.size.width - view.frame.size.width) / 2.0, 0.0f, view.frame.size.width, modalHeight);
+            modalFrameFinal = CGRectMake((targetBounds.size.width - modalFrame.size.width) / 2.0, 0.0f, modalFrame.size.width, modalHeight);
         }
         
         switch (modalPosition) {
@@ -516,40 +534,40 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         // Present view animated
         
         if (transitionStyle == KNSemiModalTransitionStyleFade) {
-            view.alpha = 0.0;
+            modalView.alpha = 0.0;
         }
         
         if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad){
             // Don't resize the view width on rotating
-            view.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+            modalView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         } else {
-            view.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
+            modalView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
         }
         
-        UIView *backingView = [[UIView alloc] initWithFrame:view.frame];
+        UIView *backingView = [[UIView alloc] initWithFrame:modalView.frame];
         backingView.userInteractionEnabled = YES;
         backingView.exclusiveTouch = YES;
         backingView.tag = kSemiModalModalBackingViewTag;
         [containerView addSubview:backingView];
         
-        view.frame = modalFrameInitial;
+        modalView.frame = modalFrameInitial;
         
-        view.tag = kSemiModalModalViewTag;
-        [containerView addSubview:view];
-        view.layer.shadowColor = [[UIColor blackColor] CGColor];
-        view.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
-        view.layer.shadowRadius = 8.0;
-        view.layer.shadowOpacity = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.shadowOpacity] floatValue];
-        view.layer.shouldRasterize = YES;
-        view.layer.rasterizationScale = [[UIScreen mainScreen] scale];
+        modalView.tag = kSemiModalModalViewTag;
+        [containerView addSubview:modalView];
+        modalView.layer.shadowColor = [[UIColor blackColor] CGColor];
+        modalView.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
+        modalView.layer.shadowRadius = 8.0;
+        modalView.layer.shadowOpacity = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.shadowOpacity] floatValue];
+        modalView.layer.shouldRasterize = YES;
+        modalView.layer.rasterizationScale = [[UIScreen mainScreen] scale];
         
-        backingView.frame = view.frame;
+        backingView.frame = modalView.frame;
         backingView.backgroundColor = [UIColor clearColor];
         
         [UIView animateWithDuration:duration animations:^{
-            view.frame = modalFrameFinal;
+            modalView.frame = modalFrameFinal;
             backingView.frame = modalFrameFinal;
-            view.alpha = 1.0;
+            modalView.alpha = 1.0;
         } completion:^(BOOL finished) {
             if (!finished) return;
             [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidShowNotification
