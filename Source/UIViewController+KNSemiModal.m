@@ -598,6 +598,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }
     
     KNSemiModalContainerView *containerView = objc_getAssociatedObject(self, kSemiModalModalContainerView);
+    objc_setAssociatedObject(self, kSemiModalModalContainerView, nil, OBJC_ASSOCIATION_ASSIGN);
     
     if (containerView == nil) {
         // Correct target for dismissal
