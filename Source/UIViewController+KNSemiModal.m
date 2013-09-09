@@ -348,7 +348,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 					dismissBlock:(KNTransitionCompletionBlock)dismissBlock {
     [self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIViewController *targetParentVC = [self kn_parentTargetViewController];
-
+    
 	// implement view controller containment for the semi-modal view controller
 	[targetParentVC addChildViewController:vc];
 	if ([vc respondsToSelector:@selector(beginAppearanceTransition:animated:)]) {
@@ -622,6 +622,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     
 	UIViewController *vc = objc_getAssociatedObject(self, kSemiModalViewController);
 	KNTransitionCompletionBlock dismissBlock = objc_getAssociatedObject(self, kSemiModalDismissBlock);
+    objc_setAssociatedObject(self, kSemiModalViewController, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, kSemiModalDismissBlock, nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
 	
 	// Child controller containment
 	[vc willMoveToParentViewController:nil];
@@ -673,9 +675,6 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         if (dismissBlock) {
             dismissBlock();
         }
-        
-        objc_setAssociatedObject(self, kSemiModalDismissBlock, nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
-        objc_setAssociatedObject(self, kSemiModalViewController, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
     }];
