@@ -381,9 +381,10 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	[self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIView * target = [self kn_parentTarget];
 	KNSemiModalContainerView *containerView = [self kn_containerViewForTarget:target];
+    
     if (![target.subviews containsObject:modalView] && ![containerView.subviews containsObject:modalView]) {
         // Set associative object
-        objc_setAssociatedObject(modalView, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(target, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
         // Register for orientation changes, so we can update the presenting controller screenshot
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -591,8 +592,9 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         prstingTgt = prstingTgt.parentViewController;
         presentingController = objc_getAssociatedObject(prstingTgt.view, kSemiModalPresentingViewController);
     }
+    
     if (presentingController) {
-        objc_setAssociatedObject(presentingController.view, kSemiModalPresentingViewController, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(prstingTgt.view, kSemiModalPresentingViewController, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [presentingController dismissSemiModalViewWithCompletion:completion];
         return;
     }
