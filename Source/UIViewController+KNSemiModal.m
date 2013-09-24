@@ -504,7 +504,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             overlayBackground.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
             overlayBackground.alpha = 0.0f;
             
-            parentAlpha = RANGE(0.0f, (1.0f - parentAlpha), 1.0f);
+            parentAlpha = MIN(MAX(0.0f, (1.0f - parentAlpha)), 1.0f);
             fadedView = overlayBackground;
         }
         [overlay addSubview:overlayBackground];
