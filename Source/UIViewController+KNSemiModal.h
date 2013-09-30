@@ -79,6 +79,11 @@ typedef void (^KNTransitionCompletionBlock)(void);
 		   withOptions:(NSDictionary*)options
 			completion:(KNTransitionCompletionBlock)completion;
 
+-(void)presentSemiView:(UIView*)view
+		   withOptions:(NSDictionary*)options
+			completion:(KNTransitionCompletionBlock)completion
+          dismissBlock:(KNTransitionCompletionBlock)dismissBlock;
+
 //-(void)moveSemiViewWithPercentToFinish:(float)percent;
 //-(void)beginMoveSemiViewController:(UIViewController*)vc withPredefinedSnapshotView:(UIView*)snap;
 //-(void)beginMoveSemiViewController:(UIViewController*)vc;

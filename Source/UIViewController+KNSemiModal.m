@@ -337,17 +337,22 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     return duration;
 }
 
--(void)presentSemiViewController:(UIViewController*)vc {
+-(void)presentSemiViewController:(UIViewController*)vc
+{
 	[self presentSemiViewController:vc withOptions:nil completion:nil dismissBlock:nil];
 }
+
 -(void)presentSemiViewController:(UIViewController*)vc
-					 withOptions:(NSDictionary*)options {
+					 withOptions:(NSDictionary*)options
+{
     [self presentSemiViewController:vc withOptions:options completion:nil dismissBlock:nil];
 }
+
 -(void)presentSemiViewController:(UIViewController*)vc
 					 withOptions:(NSDictionary*)options
 					  completion:(KNTransitionCompletionBlock)completion
-					dismissBlock:(KNTransitionCompletionBlock)dismissBlock {
+					dismissBlock:(KNTransitionCompletionBlock)dismissBlock
+{
     [self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIViewController *targetParentVC = [self kn_parentTargetViewController];
     
@@ -357,7 +362,6 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		[vc beginAppearanceTransition:YES animated:YES]; // iOS 6
 	}
 	objc_setAssociatedObject(self, kSemiModalViewController, vc, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-	objc_setAssociatedObject(self, kSemiModalDismissBlock, dismissBlock, OBJC_ASSOCIATION_COPY_NONATOMIC);
 	[self presentSemiView:vc.view withOptions:options completion:^{
 		[vc didMoveToParentViewController:targetParentVC];
 		if ([vc respondsToSelector:@selector(endAppearanceTransition)]) {
@@ -366,20 +370,31 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 		if (completion) {
 			completion();
 		}
-	}];
+	} dismissBlock:dismissBlock];
 }
 
--(void)presentSemiView:(UIView*)view {
+-(void)presentSemiView:(UIView*)view
+{
 	[self presentSemiView:view withOptions:nil completion:nil];
 }
 
--(void)presentSemiView:(UIView*)view withOptions:(NSDictionary*)options {
+-(void)presentSemiView:(UIView*)view withOptions:(NSDictionary*)options
+{
 	[self presentSemiView:view withOptions:options completion:nil];
 }
 
 -(void)presentSemiView:(UIView*)modalView
 		   withOptions:(NSDictionary*)options
-			completion:(KNTransitionCompletionBlock)completion {
+			completion:(KNTransitionCompletionBlock)completion
+{
+    [self presentSemiView:modalView withOptions:options completion:completion dismissBlock:nil];
+}
+
+-(void)presentSemiView:(UIView*)modalView
+		   withOptions:(NSDictionary*)options
+			completion:(KNTransitionCompletionBlock)completion
+          dismissBlock:(KNTransitionCompletionBlock)dismissBlock
+{
 	[self kn_registerDefaultsAndOptions:options]; // re-registering is OK
 	UIView * target = [self kn_parentTarget];
 	KNSemiModalContainerView *containerView = [self kn_containerViewForTarget:target];
@@ -387,6 +402,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     if (![target.subviews containsObject:modalView] && ![containerView.subviews containsObject:modalView]) {
         // Set associative object
         objc_setAssociatedObject(target, kSemiModalPresentingViewController, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(self, kSemiModalDismissBlock, dismissBlock, OBJC_ASSOCIATION_COPY_NONATOMIC);
         
         // Register for orientation changes, so we can update the presenting controller screenshot
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -589,11 +605,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     }
 }
 
--(void)dismissSemiModalView {
+-(void)dismissSemiModalView
+{
 	[self dismissSemiModalViewWithCompletion:nil];
 }
 
--(void)dismissSemiModalViewWithCompletion:(void (^)(void))completion {
+-(void)dismissSemiModalViewWithCompletion:(void (^)(void))completion
+{
     // Look for presenting controller if available
     UIViewController * prstingTgt = self;
     UIViewController * presentingController = objc_getAssociatedObject(prstingTgt.view, kSemiModalPresentingViewController);
