@@ -30,6 +30,7 @@ extern const struct KNSemiModalOptionKeys {
 	__unsafe_unretained NSString *modalPosition;            // boxed NSNumber - one of the KNSemiModalModalPosition values.
     __unsafe_unretained NSString *disableCancel;            // boxed BOOL. default is NO.
 	__unsafe_unretained NSString *backgroundColor;          // default is [UIColor blackColor].
+    __unsafe_unretained NSString *useBackingView;           // boxed BOOL. default is YES.
     __unsafe_unretained NSString *useParentWidth;           // boxed BOOL. default is YES (NO for iPad).
     __unsafe_unretained NSString *statusBarHeight;          // boxed double. default is 20.0f.
     __unsafe_unretained NSString *customWidth;              // boxed double. default is -1.0f.

@@ -28,6 +28,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
 	.modalPosition           = @"KNSemiModalModalPosition",
     .disableCancel           = @"KNSemiModalOptionDisableCancel",
     .backgroundColor         = @"KNSemiModalOptionBackgroundColor",
+    .useBackingView          = @"KNSemiModalOptionUseBackingView",
     .useParentWidth          = @"KNSemiModalOptionUseParentWidth",
     .statusBarHeight         = @"KNSemiModalOptionStatusBarHeight",
     .customWidth             = @"KNSemiModalOptionCustomWidth",
@@ -104,6 +105,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
              KNSemiModalOptionKeys.modalPosition : @(KNSemiModalModalPositionBottom),
              KNSemiModalOptionKeys.disableCancel : @(NO),
              KNSemiModalOptionKeys.backgroundColor : [UIColor blackColor],
+             KNSemiModalOptionKeys.useBackingView : @(YES),
              KNSemiModalOptionKeys.useParentWidth : @(useParentWidth),
              KNSemiModalOptionKeys.statusBarHeight : @(20.0f),
              KNSemiModalOptionKeys.customWidth : @(-1.0f),
@@ -545,13 +547,20 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             modalView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
         }
         
+        
         UIView *backingView = [[UIView alloc] initWithFrame:modalView.frame];
-        backingView.userInteractionEnabled = YES;
-        backingView.exclusiveTouch = YES;
         backingView.tag = kSemiModalModalBackingViewTag;
         [containerView addSubview:backingView];
-        
         modalView.frame = modalFrameInitial;
+        
+        BOOL useBackingView = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.useBackingView] boolValue];
+        if (useBackingView) {
+            backingView.userInteractionEnabled = YES;
+            backingView.exclusiveTouch = YES;
+        } else {
+            backingView.userInteractionEnabled = NO;
+            backingView.exclusiveTouch = NO;
+        }
         
         modalView.tag = kSemiModalModalViewTag;
         [containerView addSubview:modalView];
