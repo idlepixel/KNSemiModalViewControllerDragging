@@ -21,6 +21,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
     .parentScaleFinal        = @"KNSemiModalOptionParentScaleFinal",
     .parentDisplacement      = @"KNSemiModalOptionParentDisplacement",
 	.shadowOpacity           = @"KNSemiModalOptionShadowOpacity",
+	.shadowRadius            = @"KNSemiModalOptionShadowRadius",
 	.transitionInStyle       = @"KNSemiModalTransitionInStyle",
 	.transitionOutStyle      = @"KNSemiModalTransitionOutStyle",
 	.transitionInDirection   = @"KNSemiModalTransitionInDirection",
@@ -98,6 +99,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
              KNSemiModalOptionKeys.parentScaleFinal : @(0.8),
              KNSemiModalOptionKeys.parentDisplacement : @(parentDisplacement),
              KNSemiModalOptionKeys.shadowOpacity : @(0.8),
+             KNSemiModalOptionKeys.shadowRadius : @(8.0),
              KNSemiModalOptionKeys.transitionInStyle : @(KNSemiModalTransitionStyleSlide),
              KNSemiModalOptionKeys.transitionOutStyle : @(KNSemiModalTransitionStyleSlide),
              KNSemiModalOptionKeys.transitionInDirection : @(KNSemiModalTransitionDirectionAutomatic),
@@ -582,7 +584,7 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         [containerView addSubview:modalView];
         modalView.layer.shadowColor = [[UIColor blackColor] CGColor];
         modalView.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
-        modalView.layer.shadowRadius = 8.0;
+        modalView.layer.shadowRadius = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.shadowRadius] floatValue];
         modalView.layer.shadowOpacity = [[self ym_optionOrDefaultForKey:KNSemiModalOptionKeys.shadowOpacity] floatValue];
         modalView.layer.shouldRasterize = YES;
         modalView.layer.rasterizationScale = [[UIScreen mainScreen] scale];

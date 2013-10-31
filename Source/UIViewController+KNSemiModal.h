@@ -23,6 +23,7 @@ extern const struct KNSemiModalOptionKeys {
     __unsafe_unretained NSString *parentScaleFinal;         // boxed double default is 0.8
     __unsafe_unretained NSString *parentDisplacement;       // boxed double, as percentage. default is 0.08 (0.04 for iPad).
 	__unsafe_unretained NSString *shadowOpacity;            // default is 0.8
+	__unsafe_unretained NSString *shadowRadius;             // default is 8.0
 	__unsafe_unretained NSString *transitionInStyle;        // boxed NSNumber - one of the KNSemiModalTransitionStyle values. default is KNSemiModalTransitionStyleSlide.
 	__unsafe_unretained NSString *transitionOutStyle;       // boxed NSNumber - one of the KNSemiModalTransitionStyle values. default is KNSemiModalTransitionStyleAutomatic.
 	__unsafe_unretained NSString *transitionInDirection;    // boxed NSNumber - one of the KNSemiModalTransitionDirection values. default is KNSemiModalTransitionDirectionAutomatic.
