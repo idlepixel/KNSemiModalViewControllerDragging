@@ -710,6 +710,8 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
     }];
     
+    __weak UIViewController *weakSelf = self;
+    
     // Begin overlay animation
     UIImageView * screenshotView = (UIImageView*)[overlayView viewWithTag:kSemiModalScreenshotTag];
     if (screenshotView != nil) {
@@ -720,11 +722,13 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             screenshotView.alpha = 1.0f;
         } completion:^(BOOL finished) {
             if(finished){
+                __strong UIViewController *strongSelf = weakSelf;
                 [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
-                                                                    object:self];
+                                                                    object:strongSelf];
                 if (completion) {
                     completion();
                 }
+                [strongSelf semiModalViewWasDismissed];
             }
         }];
     } else {
@@ -734,14 +738,21 @@ const struct KNSemiModalOptionKeys KNSemiModalOptionKeys = {
             overlayBackgroundView.alpha = 0.0f;
         } completion:^(BOOL finished) {
             if(finished){
+                __strong UIViewController *strongSelf = weakSelf;
                 [[NSNotificationCenter defaultCenter] postNotificationName:kSemiModalDidHideNotification
-                                                                    object:self];
+                                                                    object:strongSelf];
                 if (completion) {
                     completion();
                 }
+                [strongSelf semiModalViewWasDismissed];
             }
         }];
     }
+}
+
+-(void)semiModalViewWasDismissed
+{
+    // do nothing
 }
 
 - (void)resizeSemiView:(CGSize)newSize
